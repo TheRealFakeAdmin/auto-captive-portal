@@ -24,7 +24,7 @@ const
     // Select username input field, then fill it
     await driver.findElement(By.id(userElementId)).sendKeys(loginEmail);
 
-    // Select password input field, then fill it
+    // Select password input field, then fill it & submit the form
     await driver.findElement(By.id(passElementId)).sendKeys(loginPass, Key.RETURN);
 
     // Wait for tab title to match expected success state, or time out in 10 seconds
