@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd /home/trfa/Documents/GitHub/auto-captive-login
+
+sudo tailscale set --exit-node= && echo "Tailscale: Set exit-node to \"\"" &&
+
+echo "Node: Running auto-captive-login" &&
+/home/trfa/.nvm/versions/node/v22.16.0/bin/node main.js
+
+sudo tailscale set --exit-node=oppy && echo "Tailscale: Set exit-node to \"oppy\""
+
+read -s -n 1 -p "Press any key to continue..." && echo ""
+
