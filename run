@@ -9,5 +9,8 @@ echo "Node: Running auto-captive-login" &&
 
 sudo tailscale set --exit-node=oppy && echo "Tailscale: Set exit-node to \"oppy\""
 
-read -s -n 1 -p "Press any key to continue..." && echo ""
+if [[ $(readlink -f /proc/$(ps -o ppid:1= -p $$)/exe) != $(readlink -f "$SHELL") ]]
+then
+    read -s -n 1 -p "Press any key to continue..." && echo ""
+fi
 
