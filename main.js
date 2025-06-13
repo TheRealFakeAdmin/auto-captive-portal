@@ -21,15 +21,21 @@ const
     // Navigate to Firefox's canonical portal detector
     await driver.get('http://detectportal.firefox.com/canonical.html');
 
-    // Select username input field, then fill it
-    await driver.findElement(By.id(userElementId)).sendKeys(loginEmail);
+    try {
+        // Select username input field, then fill it
+        await driver.findElement(By.id(userElementId)).sendKeys(loginEmail);
 
-    // Select password input field, then fill it & submit the form
-    await driver.findElement(By.id(passElementId)).sendKeys(loginPass, Key.RETURN);
+        // Select password input field, then fill it & submit the form
+        await driver.findElement(By.id(passElementId)).sendKeys(loginPass, Key.RETURN);
 
-    // Wait for tab title to match expected success state, or time out in 10 seconds
-    await driver.wait(until.titleIs(redirectTitle), 10000);
+        // Wait for tab title to match expected success state, or time out in 10 seconds
+        await driver.wait(until.titleIs(redirectTitle), 10000);
 
-    // If success, output "Logged In"
-    console.log("Logged In");
+        // If success, output "Logged In"
+        console.log("Logged In");
+    } catch (_) {
+        // If login-step failed, output "Failed to Log In"
+        console.log("Failed to Log In");
+    }
 })();
+
