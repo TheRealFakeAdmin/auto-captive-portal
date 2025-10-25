@@ -304,14 +304,14 @@ while getopts ":hvsc:" opt; do
 
     # Invalid option
     \?)
-        Log "${ERROR}Unknown option:${NoColor} -$opt"
+        Log "${ERROR}Unknown option:${NoColor} -${OPTARG}"
         Help
         exit 1
         ;;
 
     # Missing argument for options that require one
     :) 
-        Log "${ERROR}Option -$opt requires an argument.${NoColor}"
+        Log "${ERROR}Option -${OPTARG} requires an argument.${NoColor}"
         Help
         exit 1
         ;;
