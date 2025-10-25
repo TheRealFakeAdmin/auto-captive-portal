@@ -3,50 +3,28 @@
 # App Version
 VERSION="v1.2.0"
 
-############################################################
-# Log Formatting                                           #
-############################################################
-RedColor="\033[0;31m"
-GreyColor="\033[38;2;128;128;128m"
-YellowColor="\033[0;33m"
-GreenColor="\033[0;32m"
-BOLD="\033[1m"
-ITALIC="\033[3m"
-NoColor="\033[0m" # No Color
-
-# If Unsupported, Disable Styling
-if [ -t 1 ] && [ -n "${TERM:-}" ] && [ "$TERM" != "dumb" ]; then
-    : # keep colors
-else
-    RedColor=""; GreyColor=""; YellowColor=""; GreenColor=""
-    BOLD=""; ITALIC=""; NoColor=""
-fi
-
-# Log Levels
-INFO="${BOLD}${GreenColor}"
-WARN="${BOLD}${YellowColor}"
-ERROR="${BOLD}${RedColor}"
-
-# Log Prefixes
-# Tailscale
-TailscalePrefix="${BOLD}${GreyColor}Tailscale:${NoColor}"
-
-# Mullvad
-MullvadPrefix="${BOLD}${GreyColor}Mullvad:${NoColor}"
-
-# Node
-NodePrefix="${BOLD}${GreyColor}Node:${NoColor}"
-
-# Home VPN
-VPNPrefix="${BOLD}${GreyColor}VPN:${NoColor}"
-
-# Captive Login
-CaptiveLoginPrefix="${BOLD}${GreyColor}ACL Wrapper:${NoColor}"
-
 
 ############################################################
 # Functions                                                #
 ############################################################
+
+DisableStyling() {
+    RedColor=""
+    GreyColor=""
+    YellowColor=""
+    GreenColor=""
+    BOLD=""
+    ITALIC=""
+    NoColor=""
+    INFO=""
+    WARN=""
+    ERROR=""
+    TailscalePrefix="Tailscale:"
+    MullvadPrefix="Mullvad:"
+    NodePrefix="Node:"
+    VPNPrefix="VPN:"
+    CaptiveLoginPrefix="ACL Wrapper:"
+}
 
 Log() {
     printf "%b\n" "$1"
@@ -69,6 +47,7 @@ Help() {
     Log "  -h                Display this help message and exit."
     Log "  -v                Show software version and exit."
     Log "  -s                Skip auto-captive-login script."
+    Log "  -n                Disable terminal colors and formatting."
     Log "  -c <VPN choice>   Select VPN option after running captive login:"
     Log "                       1) Enable Tailscale"
     Log "                       2) Enable Mullvad"
@@ -274,13 +253,53 @@ pause_if_gui_launch() {
 
 
 ############################################################
+# Log Formatting                                           #
+############################################################
+RedColor="\033[0;31m"
+GreyColor="\033[38;2;128;128;128m"
+YellowColor="\033[0;33m"
+GreenColor="\033[0;32m"
+BOLD="\033[1m"
+ITALIC="\033[3m"
+NoColor="\033[0m" # No Color
+
+# Log Levels
+INFO="${BOLD}${GreenColor}"
+WARN="${BOLD}${YellowColor}"
+ERROR="${BOLD}${RedColor}"
+
+# Log Prefixes
+# Tailscale
+TailscalePrefix="${BOLD}${GreyColor}Tailscale:${NoColor}"
+
+# Mullvad
+MullvadPrefix="${BOLD}${GreyColor}Mullvad:${NoColor}"
+
+# Node
+NodePrefix="${BOLD}${GreyColor}Node:${NoColor}"
+
+# Home VPN
+VPNPrefix="${BOLD}${GreyColor}VPN:${NoColor}"
+
+# Captive Login
+CaptiveLoginPrefix="${BOLD}${GreyColor}ACL Wrapper:${NoColor}"
+
+# If Unsupported, Disable Styling
+if [ -t 1 ] && [ -n "${TERM:-}" ] && [ "$TERM" != "dumb" ]; then
+    : # keep colors
+else
+    DisableStyling
+fi
+
+
+############################################################
 # Options                                                  #
 ############################################################
 
 # Skip auto-captive-login if -s option is provided
 skipACL=false
 
-while getopts ":hvsc:" opt; do
+while getopts ":hvsnc:" opt; do
   case $opt in
 
     # Help option
@@ -302,6 +321,11 @@ while getopts ":hvsc:" opt; do
     # Skip auto-captive-login
     s)
         skipACL=true
+        ;;
+
+    # No Terminal Colors/Formatting
+    n)
+        DisableStyling
         ;;
 
     # VPN choice
