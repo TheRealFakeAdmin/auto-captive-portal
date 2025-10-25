@@ -8,6 +8,7 @@ VERSION="v1.3.0"
 # Functions                                                #
 ############################################################
 
+# Disable Terminal Colors/Formatting
 DisableStyling() {
     RedColor=""
     GreyColor=""
@@ -26,6 +27,7 @@ DisableStyling() {
     CaptiveLoginPrefix="ACL Wrapper:"
 }
 
+# Portable Logging Function with Formatting
 Log() {
     printf "%b\n" "$1"
 }
@@ -60,6 +62,7 @@ Help() {
     Log
 }
 
+# Navigate to the true script directory
 NavigateToScriptDirectory() {
     # Portable resolution of the script directory
     # Works when sourced or executed, follows symlinks, avoids readlink -f.
@@ -94,6 +97,7 @@ MullvadDisableLockdown() {
     mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
 }
 
+# Run Auto Captive Login
 RunAutoCaptiveLogin() {
     local node_bin=""
     if [ -n "${NVM_BIN:-}" ] && [ -x "${NVM_BIN}/node" ]; then
@@ -198,7 +202,7 @@ SelectVPN() {
 }
 
 
-
+# Disable All VPN Connections
 DisableVPN() {
     Log "${CaptiveLoginPrefix} Disabling VPN connections..."
     
@@ -222,6 +226,7 @@ DisableVPN() {
 }
 
 
+# If not interactive shell, pause
 pause_if_gui_launch() {
     # if [[ $(readlink -f /proc/$(ps -o ppid:1= -p $$)/exe) != $(readlink -f "$SHELL") ]]
     # then
@@ -366,8 +371,10 @@ Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-login"
 
 Log "${CaptiveLoginPrefix} Setting directory to script location"
 
+# Navigate to the true script directory
 NavigateToScriptDirectory
 
+# Disable All VPN Connections
 DisableVPN
 
 
@@ -382,7 +389,10 @@ else
     Log "${NodePrefix} Running auto-captive-login"
 
     Log
+
+    # Attempt to run the auto-captive-login script
     RunAutoCaptiveLogin
+
     Log
 fi
 
