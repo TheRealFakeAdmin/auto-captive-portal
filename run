@@ -1,0 +1,377 @@
+#!/usr/bin/env bash
+
+# App Version
+VERSION="v1.1.0"
+
+############################################################
+# Log Formatting                                           #
+############################################################
+RedColor="\033[0;31m"
+GreyColor="\033[38;2;128;128;128m"
+YellowColor="\033[0;33m"
+GreenColor="\033[0;32m"
+BOLD="\033[1m"
+ITALIC="\033[3m"
+NoColor="\033[0m" # No Color
+
+# If Unsupported, Disable Styling
+if [ -t 1 ] && [ -n "${TERM:-}" ] && [ "$TERM" != "dumb" ]; then
+    : # keep colors
+else
+    RedColor=""; GreyColor=""; YellowColor=""; GreenColor=""
+    BOLD=""; ITALIC=""; NoColor=""
+fi
+
+# Log Levels
+INFO="${BOLD}${GreenColor}"
+WARN="${BOLD}${YellowColor}"
+ERROR="${BOLD}${RedColor}"
+
+# Log Prefixes
+# Tailscale
+TailscalePrefix="${BOLD}${GreyColor}Tailscale:${NoColor}"
+
+# Mullvad
+MullvadPrefix="${BOLD}${GreyColor}Mullvad:${NoColor}"
+
+# Node
+NodePrefix="${BOLD}${GreyColor}Node:${NoColor}"
+
+# Home VPN
+VPNPrefix="${BOLD}${GreyColor}VPN:${NoColor}"
+
+# Captive Login
+CaptiveLoginPrefix="${BOLD}${GreyColor}ACL Wrapper:${NoColor}"
+
+
+############################################################
+# Functions                                                #
+############################################################
+
+Log() {
+    printf "%b\n" "$1"
+}
+
+# Display Help
+Help() {
+    Log
+    Log " Auto Captive Login — Bash Wrapper"
+    Log "-----------------------------------"
+    Log "This script sets up the environment for auto-captive-login and"
+    Log "allows the user to choose which VPN service to use. It also"
+    Log "provides options for enabling/disabling lockdown mode and"
+    Log "displaying help or version information."
+    Log
+    Log "Usage:"
+    Log "  captive-login [options]"
+    Log
+    Log "Options:"
+    Log "  -h                Display this help message and exit."
+    Log "  -v                Show software version and exit."
+    Log "  -s                Skip auto-captive-login script."
+    Log "  -c <VPN choice>   Select VPN option after running captive login:"
+    Log "                       1) Enable Tailscale"
+    Log "                       2) Enable Mullvad"
+    Log "                       3) Enable Home VPN"
+    Log "                       4) Done [Lockdown Mode]"
+    Log "                       5) Done [${WARN}Unsecured${NoColor}]"
+    Log
+    Log "Example:"
+    Log "  captive-login -c 5 -s"
+    Log
+}
+
+NavigateToScriptDirectory() {
+    # Portable resolution of the script directory
+    # Works when sourced or executed, follows symlinks, avoids readlink -f.
+    src="${BASH_SOURCE[0]}"
+    while [ -h "$src" ]; do
+        dir="$(cd -P -- "$(dirname -- "$src")" && pwd)"
+        src="$(readlink -- "$src")" || break
+        case "$src" in /*) : ;; *) src="$dir/$src" ;; esac
+    done
+    script_dir="$(cd -P -- "$(dirname -- "$src")" && pwd)"
+    cd "$script_dir" || { Log "${CaptiveLoginPrefix} ${ERROR}Failed to set directory to script location${NoColor}"; exit 1; }
+}
+
+
+# Get App Version
+GetVersion() {
+    NavigateToScriptDirectory
+
+    local v_js="$(
+        if command -v jq >/dev/null 2>&1; then
+            jq -r '.version // empty' package.json 2>/dev/null
+        else
+            awk -F\" '/"version"[[:space:]]*:[[:space:]]*"/{print $4; exit}' package.json 2>/dev/null
+        fi
+    )"
+    printf "${BOLD}${GreyColor}main.js:${NoColor} v%s\n" "${v_js:-unknown}"
+}
+
+# Disable Mullvad Lockdown Mode
+MullvadDisableLockdown() {
+    Log "${MullvadPrefix} Disabling Mullvad lockdown mode..."
+    mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
+}
+
+RunAutoCaptiveLogin() {
+    if [ -n "${NVM_BIN:-}" ] && [ -x "${NVM_BIN}/node" ]; then
+        local node_bin="${NVM_BIN}/node"
+    elif command -v node >/dev/null 2>&1; then
+        local node_bin="$(command -v node)"
+    else
+        local node_bin=""
+    fi
+
+
+    if [ -n "$node_bin" ]; then
+        "$node_bin" main.js
+    else
+        Log -e "${NodePrefix} ${ERROR}Node.js not found; cannot run auto-captive-login${NoColor}"
+    fi
+}
+
+# Display VPN Options
+SelectVPN() {
+
+    while :; do
+
+        # Display VPN Options
+        Log "${CaptiveLoginPrefix} Displaying VPN options"
+        Log
+        Log "Please enter your choice: "
+        Log "  1) Enable Tailscale"
+        Log "  2) Enable Mullvad"
+        Log "  3) Enable Home VPN"
+        Log "  4) Done [Lockdown Mode]"
+        Log "  5) Done [${WARN}Unsecured${NoColor}]"
+        Log
+
+        # Prompt user for choice if not already set by -c option
+        if [ -z "${choice:-}" ]; then
+            read -n 1 -p "Please enter your choice [1-5]: " choice
+        else
+            Log "Please enter your choice [1-5]: ${choice}"
+        fi
+        Log
+
+
+        case $choice in
+
+            # Enable Tailscale
+            1)
+                Log "${TailscalePrefix} Enabling Tailscale..."
+                tailscale set --exit-node=oppy && Log "${TailscalePrefix} Set exit-node to \"oppy\""
+                MullvadDisableLockdown
+                break
+                ;;
+
+            # Enable Mullvad
+            2)
+                Log "${MullvadPrefix} Enabling Mullvad..."
+                mullvad connect --wait && Log "${MullvadPrefix} Connected"
+                MullvadDisableLockdown
+                break
+                ;;
+
+            # Enable Home VPN
+            3)
+                MullvadDisableLockdown
+                Log "${VPNPrefix} Enabling Home VPN..."
+                if command -v nmcli >/dev/null 2>&1; then
+                    nmcli connection up "Home VPN" >/dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
+                else
+                    Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
+                fi
+
+                # nmcli connection up "Home VPN" > /dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
+                break
+                ;;
+
+            # Done [Lockdown Mode]
+            4)
+                Log "${CaptiveLoginPrefix} Done. Keeping lockdown mode on..."
+                break
+                ;;
+            
+            # Done [Unsecured]
+            5)
+                Log "${CaptiveLoginPrefix} Done. Setting lockdown mode to off..."
+                MullvadDisableLockdown
+                break
+                ;;
+
+            # Invalid Option, Prompt Again
+            *)
+                Log "${ERROR}Invalid option: $choice${NoColor}"
+                unset choice
+                Log
+                ;;
+        esac
+    done
+}
+
+
+
+DisableVPN() {
+    Log "${CaptiveLoginPrefix} Disabling VPN connections..."
+    
+    # Reset Tailscale exit-node to none
+    tailscale set --exit-node= && Log "${TailscalePrefix} Set exit-node to \"\""
+
+    # Disconnect from Mullvad
+    Log "${MullvadPrefix} Disconnecting Mullvad..." && mullvad disconnect --wait > /dev/null && Log "${MullvadPrefix} Disconnected"
+
+    # Set Mullvad lockdown mode to off
+    mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
+
+    # Disconnect from Home VPN
+    Log "${VPNPrefix} Disconnecting \"Home VPN\"..."
+    if command -v nmcli > /dev/null 2>&1; then
+        nmcli connection down "Home VPN" > /dev/null 2>&1 \
+        && Log "${VPNPrefix} Disabled Home VPN" || Log "${VPNPrefix} ${WARN}Failed to disable \"Home VPN\"${NoColor}"
+    else
+        Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
+    fi
+}
+
+
+pause_if_gui_launch() {
+    # if [[ $(readlink -f /proc/$(ps -o ppid:1= -p $$)/exe) != $(readlink -f "$SHELL") ]]
+    # then
+    #     read -s -n 1 -p "Press any key to continue..." && Log
+    # fi
+
+    # Never pause if there's no TTY available; avoids hangs.
+    [ -t 0 ] || return 0
+
+    # Detect parent program name (robust across bash/zsh).
+    # Falls back gracefully if /proc isn’t available (e.g., some BSDs).
+    parent_comm="$(
+        if command -v ps >/dev/null 2>&1; then
+        ps -o comm= -p "${PPID}"
+        else
+        Log ""
+        fi
+    )"
+
+    # Common interactive terminal hosts: shells/multiplexers
+    if printf '%s\n' "$parent_comm" | grep -Eq '(^|/)(bash|zsh|fish|ksh|tmux|screen)$'; then
+        # Launched from a shell → don't pause
+        return 0
+    fi
+
+    # Otherwise likely a GUI/double-click → pause
+    read -s -n 1 -p "Press any key to continue..." && Log
+}
+
+
+############################################################
+# Options                                                  #
+############################################################
+
+# Skip auto-captive-login if -s option is provided
+skipACL=false
+
+while getopts ":hvsc:" opt; do
+  case $opt in
+
+    # Help option
+    h)
+        Help
+        exit 0
+        ;;
+
+    # Version option
+    v)
+        Log "${BOLD}${GreyColor}Auto Captive Login Version${NoColor}"
+        Log "${BOLD}${GreyColor}-------------------------------${NoColor}"
+        Log "${BOLD}${GreyColor}Wrapper:${NoColor} ${VERSION}"
+        GetVersion
+        Log
+        exit 0
+        ;;
+
+    # Skip auto-captive-login
+    s)
+        skipACL=true
+        ;;
+
+    # VPN choice
+    c)
+        choice=$OPTARG
+        ;;
+
+    # Invalid option
+    \?)
+        Log "${ERROR}Unknown option:${NoColor} -$opt"
+        Help
+        exit 1
+        ;;
+
+    # Missing argument for options that require one
+    :) 
+        Log "${ERROR}Option -$opt requires an argument.${NoColor}"
+        Help
+        exit 1
+        ;;
+
+    # Invalid option (catch-all)
+    *) 
+        Log "${ERROR}Invalid option:${NoColor} -$opt"
+        Help
+        exit 1
+        ;;
+  esac
+done
+
+
+############################################################
+# Setup Known State                                        #
+############################################################
+
+Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-login"
+
+
+Log "${CaptiveLoginPrefix} Setting directory to script location"
+
+NavigateToScriptDirectory
+
+DisableVPN
+
+
+############################################################
+# Auto Captive Login                                       #
+############################################################
+
+# Check if the user has chosen to skip auto-captive-login
+if $skipACL; then
+    Log "${CaptiveLoginPrefix} Skipping auto-captive-login"
+else
+    Log "${NodePrefix} Running auto-captive-login"
+
+    Log
+    RunAutoCaptiveLogin
+    Log
+fi
+
+# Set Mullvad lockdown mode to on
+mullvad lockdown-mode set on > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to on"
+
+
+############################################################
+# Display VPN Options                                      #
+############################################################
+
+# Run VPN Select Prompt
+SelectVPN
+
+Log "${CaptiveLoginPrefix} Done"
+
+
+############################################################
+# If not interactive shell, pause                          #
+############################################################
+
+pause_if_gui_launch
