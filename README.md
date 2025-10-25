@@ -1,4 +1,4 @@
-# Auto-Captive-Portal Wrapper v1.2.0
+# Auto-Captive-Portal Wrapper v1.3.0
 
 The point of this project is to make logging in to a captive portal as easy as a single command.
 
