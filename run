@@ -148,8 +148,15 @@ SelectVPN() {
         Log
 
         # Prompt user for choice if not already set by -c option
+        # Also exit if no TTY available
         if [ -z "${choice:-}" ]; then
-            read -n 1 -p "Please enter your choice [1-5]: " choice
+            if [ -t 0 ]; then
+                read -n 1 -p "Please enter your choice [1-5]: " choice
+            else
+                Log "${CaptiveLoginPrefix} ${ERROR}No TTY available to prompt for choice (use -c 1..5)${NoColor}"
+                Log "${CaptiveLoginPrefix} ${ERROR}Defaulting to option 4 (Done [Lockdown Mode]) due to lack of TTY${NoColor}"
+                choice=4
+            fi
         else
             Log "Please enter your choice [1-5]: ${choice}"
         fi
