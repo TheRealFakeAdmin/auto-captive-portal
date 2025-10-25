@@ -116,12 +116,11 @@ MullvadDisableLockdown() {
 }
 
 RunAutoCaptiveLogin() {
+    local node_bin=""
     if [ -n "${NVM_BIN:-}" ] && [ -x "${NVM_BIN}/node" ]; then
-        local node_bin="${NVM_BIN}/node"
+        node_bin="${NVM_BIN}/node"
     elif command -v node >/dev/null 2>&1; then
-        local node_bin="$(command -v node)"
-    else
-        local node_bin=""
+        node_bin="$(command -v node)"
     fi
 
 
