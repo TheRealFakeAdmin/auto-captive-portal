@@ -127,7 +127,7 @@ RunAutoCaptiveLogin() {
     if [ -n "$node_bin" ]; then
         "$node_bin" main.js
     else
-        Log "${NodePrefix} ${ERROR}Node.js not found; cannot run auto-captive-login${NoColor}"
+        Log "${NodePrefix} ${ERROR}Node.js not found (checked: \${NVM_BIN}/node and PATH)${NoColor}"
     fi
 }
 
