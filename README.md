@@ -26,6 +26,6 @@ The second is the Auto-Captive-Portal (or Login) Wrapper bash script used to man
 2. Navigate to the cloned directory
    > `cd auto-captive-portal`
 3. Set the run script to executable
-   > `sudo chmod +x ./run`
+   > `chmod +x ./run`
 4. Create a symbolic link to use as a terminal command
    > `ln -s "${PWD}/run" /usr/local/bin/captive-login`
