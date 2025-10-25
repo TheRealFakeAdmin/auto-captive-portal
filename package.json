@@ -1,7 +1,7 @@
 {
-  "name": "auto-captive-login",
+  "name": "auto-captive-portal",
   "version": "0.0.1-dev",
-  "description": "Auto logs into a captive portal using headless firefox.",
+  "description": "Auto logs in to a captive portal using headless firefox.",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

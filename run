@@ -24,7 +24,7 @@ DisableStyling() {
     MullvadPrefix="Mullvad:"
     NodePrefix="Node:"
     VPNPrefix="VPN:"
-    CaptiveLoginPrefix="ACL Wrapper:"
+    CaptiveLoginPrefix="ACP Wrapper:"
 }
 
 # Portable Logging Function with Formatting
@@ -37,7 +37,7 @@ Help() {
     Log
     Log " Auto Captive Login — Bash Wrapper"
     Log "-----------------------------------"
-    Log "This script sets up the environment for auto-captive-login and"
+    Log "This script sets up the environment for auto-captive-portal and"
     Log "allows the user to choose which VPN service to use. It also"
     Log "provides options for enabling/disabling lockdown mode and"
     Log "displaying help or version information."
@@ -48,7 +48,7 @@ Help() {
     Log "Options:"
     Log "  -h                Display this help message and exit."
     Log "  -v                Show software version and exit."
-    Log "  -s                Skip auto-captive-login script."
+    Log "  -s                Skip auto-captive-portal script."
     Log "  -n                Disable terminal colors and formatting."
     Log "  -c <VPN choice>   Select VPN option after running captive login:"
     Log "                       1) Enable Tailscale"
@@ -287,7 +287,7 @@ NodePrefix="${BOLD}${GreyColor}Node:${NoColor}"
 VPNPrefix="${BOLD}${GreyColor}VPN:${NoColor}"
 
 # Captive Login
-CaptiveLoginPrefix="${BOLD}${GreyColor}ACL Wrapper:${NoColor}"
+CaptiveLoginPrefix="${BOLD}${GreyColor}ACP Wrapper:${NoColor}"
 
 # If Unsupported, Disable Styling
 if [ -t 1 ] && [ -n "${TERM:-}" ] && [ "$TERM" != "dumb" ]; then
@@ -301,8 +301,8 @@ fi
 # Options                                                  #
 ############################################################
 
-# Skip auto-captive-login if -s option is provided
-skipACL=false
+# Skip auto-captive-portal if -s option is provided
+skipACP=false
 
 while getopts ":hvsnc:" opt; do
   case $opt in
@@ -323,9 +323,9 @@ while getopts ":hvsnc:" opt; do
         exit 0
         ;;
 
-    # Skip auto-captive-login
+    # Skip auto-captive-portal
     s)
-        skipACL=true
+        skipACP=true
         ;;
 
     # No Terminal Colors/Formatting
@@ -366,7 +366,7 @@ done
 # Setup Known State                                        #
 ############################################################
 
-Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-login"
+Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-portal"
 
 
 Log "${CaptiveLoginPrefix} Setting directory to script location"
@@ -382,15 +382,15 @@ DisableVPN
 # Auto Captive Login                                       #
 ############################################################
 
-# Check if the user has chosen to skip auto-captive-login
-if $skipACL; then
-    Log "${CaptiveLoginPrefix} Skipping auto-captive-login"
+# Check if the user has chosen to skip auto-captive-portal
+if $skipACP; then
+    Log "${CaptiveLoginPrefix} Skipping auto-captive-portal"
 else
-    Log "${NodePrefix} Running auto-captive-login"
+    Log "${NodePrefix} Running auto-captive-portal"
 
     Log
 
-    # Attempt to run the auto-captive-login script
+    # Attempt to run the auto-captive-portal script
     RunAutoCaptiveLogin
 
     Log

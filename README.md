@@ -13,9 +13,9 @@ This project is broken up into two different scripts.
 
 ### Auto-Captive-Portal [Node.js]
 
-The first is the Node.js script. This file is the single-function origin of this project. Its sole purpose is to log in to a captive-portal, using the information entered into the .env file.
+The first is the Node.js script. This file is the single-function origin of this project. Its sole purpose is to log in to a captive portal, using the information entered into the .env file.
 
-### ACL Wrapper [Bash]
+### ACP Wrapper [Bash]
 
 The second is the Auto-Captive-Portal (or Login) Wrapper bash script used to manage the dance of VPN processes with minimal leakage (to be improved).
 
