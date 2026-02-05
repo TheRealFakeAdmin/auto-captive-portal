@@ -5,7 +5,7 @@ IFS=$' \t\n'
 trap 'code=$?; Log "${CaptiveLoginPrefix} ${ERROR}Aborting (exit $code)${NoColor}"; exit $code' ERR
 
 # App Version
-VERSION="v1.4.0"
+VERSION="v1.4.1"
 
 
 ############################################################
@@ -110,6 +110,11 @@ GetVersion() {
     printf ":${NoColor} v%s\n" "${v_js:-unknown}"
 }
 
+
+#############################################################
+# Enable VPNs                                               #
+#############################################################
+
 # Enable Tailscale
 EnableTailscale() {
     Log "${TailscalePrefix} Enabling Tailscale..."
@@ -134,11 +139,52 @@ EnableHomeVPN() {
     # nmcli connection up "Home VPN" > /dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
 }
 
+
+#############################################################
+# Disable VPNs                                              #
+#############################################################
+
+# Disable Tailscale
+DisableTailscale() {
+    Log "${TailscalePrefix} Disabling Tailscale..."
+    tailscale set --exit-node= > /dev/null 2>&1 \
+    && Log "${TailscalePrefix} Set exit-node to \"\"" || Log "${TailscalePrefix} ${WARN}Failed to disable Tailscale${NoColor}"
+}
+
+# Disable Mullvad
+DisableMullvad() {
+    Log "${MullvadPrefix} Disconnecting Mullvad..."
+    mullvad disconnect --wait > /dev/null && Log "${MullvadPrefix} Disconnected"
+}
+
+# Disable Home VPN
+DisableHomeVPN() {
+    Log "${VPNPrefix} Disconnecting \"Home VPN\"..."
+    if command -v nmcli > /dev/null 2>&1; then
+        nmcli connection down "Home VPN" > /dev/null 2>&1 \
+        && Log "${VPNPrefix} Disabled Home VPN" || Log "${VPNPrefix} ${WARN}Failed to disable \"Home VPN\"${NoColor}"
+    else
+        Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
+    fi
+}
+
+
+#############################################################
+# Enable / Disable Lockdown Mode                            #
+#############################################################
+
+# Enable Mullvad Lockdown Mode
+MullvadEnableLockdown() {
+    Log "${MullvadPrefix} Enabling Mullvad lockdown mode..."
+    mullvad lockdown-mode set on > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to on"
+}
+
 # Disable Mullvad Lockdown Mode
 MullvadDisableLockdown() {
     Log "${MullvadPrefix} Disabling Mullvad lockdown mode..."
     mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
 }
+
 
 # Run Auto Captive Portal
 RunAutoCaptiveLogin() {
@@ -250,22 +296,29 @@ DisableVPN() {
     Log "${CaptiveLoginPrefix} Disabling VPN connections..."
     
     # Reset Tailscale exit-node to none
-    tailscale set --exit-node= && Log "${TailscalePrefix} Set exit-node to \"\""
+    DisableTailscale
 
     # Disconnect from Mullvad
-    Log "${MullvadPrefix} Disconnecting Mullvad..." && mullvad disconnect --wait > /dev/null && Log "${MullvadPrefix} Disconnected"
-
-    # Set Mullvad lockdown mode to off
-    mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
+    DisableMullvad
 
     # Disconnect from Home VPN
-    Log "${VPNPrefix} Disconnecting \"Home VPN\"..."
-    if command -v nmcli > /dev/null 2>&1; then
-        nmcli connection down "Home VPN" > /dev/null 2>&1 \
-        && Log "${VPNPrefix} Disabled Home VPN" || Log "${VPNPrefix} ${WARN}Failed to disable \"Home VPN\"${NoColor}"
-    else
-        Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
-    fi
+    DisableHomeVPN
+}
+
+# Setup Known System State
+SetupKnownState() {
+    Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-portal"
+
+    Log "${CaptiveLoginPrefix} Setting directory to script location"
+
+    # Navigate to the true script directory
+    NavigateToScriptDirectory
+
+    # Set Mullvad lockdown mode to on
+    MullvadEnableLockdown
+
+    # Disable All VPN Connections
+    DisableVPN
 }
 
 
@@ -409,16 +462,7 @@ done
 # Setup Known State                                        #
 ############################################################
 
-Log "${CaptiveLoginPrefix} Setting up known state for auto-captive-portal"
-
-
-Log "${CaptiveLoginPrefix} Setting directory to script location"
-
-# Navigate to the true script directory
-NavigateToScriptDirectory
-
-# Disable All VPN Connections
-DisableVPN
+SetupKnownState
 
 
 ############################################################
@@ -440,7 +484,7 @@ else
 fi
 
 # Set Mullvad lockdown mode to on
-mullvad lockdown-mode set on > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to on"
+MullvadEnableLockdown
 
 
 ############################################################
