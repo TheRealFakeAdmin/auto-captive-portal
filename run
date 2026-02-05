@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
+set -Eeo pipefail
+IFS=$' \t\n'
+trap 'code=$?; Log "${CaptiveLoginPrefix} ${ERROR}Aborting (exit $code)${NoColor}"; exit $code' ERR
+
 # App Version
-VERSION="v1.3.0"
+VERSION="v1.4.0"
 
 
 ############################################################
@@ -35,8 +39,8 @@ Log() {
 # Display Help
 Help() {
     Log
-    Log " Auto Captive Login — Bash Wrapper"
-    Log "-----------------------------------"
+    Log " Auto Captive Portal — Bash Wrapper"
+    Log "------------------------------------"
     Log "This script sets up the environment for auto-captive-portal and"
     Log "allows the user to choose which VPN service to use. It also"
     Log "provides options for enabling/disabling lockdown mode and"
@@ -54,11 +58,12 @@ Help() {
     Log "                       1) Enable Tailscale"
     Log "                       2) Enable Mullvad"
     Log "                       3) Enable Home VPN"
-    Log "                       4) Done [Lockdown Mode]"
-    Log "                       5) Done [${WARN}Unsecured${NoColor}]"
+    Log "                       4) Enable Home & Mullvad VPN"
+    Log "                       5) Done [Lockdown Mode]"
+    Log "                       6) Done [${WARN}Unsecured${NoColor}]"
     Log
     Log "Example:"
-    Log "  captive-login -c 5 -s"
+    Log "  captive-login -c 4 -s"
     Log
 }
 
@@ -76,6 +81,18 @@ NavigateToScriptDirectory() {
     cd "$script_dir" || { Log "${CaptiveLoginPrefix} ${ERROR}Failed to set directory to script location${NoColor}"; exit 1; }
 }
 
+# Returns values from package.json
+GetPackageValue() {
+    local key="$1"
+    local value="$(
+        if command -v jq >/dev/null 2>&1; then
+            jq -r ".${key} // empty" package.json 2>/dev/null
+        else
+            awk -F\" -v k="$key" '$0 ~ "\""k"\"[[:space:]]*:[[:space:]]*\""{print $4; exit}' package.json 2>/dev/null
+        fi
+    )"
+    printf "${value:-unknown}"
+}
 
 # Get App Version
 GetVersion() {
@@ -88,7 +105,33 @@ GetVersion() {
             awk -F\" '/"version"[[:space:]]*:[[:space:]]*"/{print $4; exit}' package.json 2>/dev/null
         fi
     )"
-    printf "${BOLD}${GreyColor}main.js:${NoColor} v%s\n" "${v_js:-unknown}"
+    printf "${BOLD}${GreyColor}"
+    GetPackageValue main
+    printf ":${NoColor} v%s\n" "${v_js:-unknown}"
+}
+
+# Enable Tailscale
+EnableTailscale() {
+    Log "${TailscalePrefix} Enabling Tailscale..."
+    tailscale set --exit-node=oppy && Log "${TailscalePrefix} Set exit-node to \"oppy\""
+}
+
+# Enable Mullvad
+EnableMullvad() {
+    Log "${MullvadPrefix} Enabling Mullvad..."
+    mullvad connect --wait && Log "${MullvadPrefix} Connected"
+}
+
+# Enable Home VPN
+EnableHomeVPN() {
+    Log "${VPNPrefix} Enabling Home VPN..."
+    if command -v nmcli >/dev/null 2>&1; then
+        nmcli connection up "Home VPN" >/dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
+    else
+        Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
+    fi
+
+    # nmcli connection up "Home VPN" > /dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
 }
 
 # Disable Mullvad Lockdown Mode
@@ -97,7 +140,7 @@ MullvadDisableLockdown() {
     mullvad lockdown-mode set off > /dev/null && Log "${MullvadPrefix} Set lockdown-mode to off"
 }
 
-# Run Auto Captive Login
+# Run Auto Captive Portal
 RunAutoCaptiveLogin() {
     local node_bin=""
     if [ -n "${NVM_BIN:-}" ] && [ -x "${NVM_BIN}/node" ]; then
@@ -126,22 +169,23 @@ SelectVPN() {
         Log "  1) Enable Tailscale"
         Log "  2) Enable Mullvad"
         Log "  3) Enable Home VPN"
-        Log "  4) Done [Lockdown Mode]"
-        Log "  5) Done [${WARN}Unsecured${NoColor}]"
+        Log "  4) Enable Mullvad & Home VPN"
+        Log "  5) Done [Lockdown Mode]"
+        Log "  6) Done [${WARN}Unsecured${NoColor}]"
         Log
 
         # Prompt user for choice if not already set by -c option
         # Also exit if no TTY available
         if [ -z "${choice:-}" ]; then
             if [ -t 0 ]; then
-                read -n 1 -p "Please enter your choice [1-5]: " choice
+                read -n 1 -p "Please enter your choice [1-6]: " choice
             else
-                Log "${CaptiveLoginPrefix} ${ERROR}No TTY available to prompt for choice (use -c 1..5)${NoColor}"
-                Log "${CaptiveLoginPrefix} ${ERROR}Defaulting to option 4 (Done [Lockdown Mode]) due to lack of TTY${NoColor}"
-                choice=4
+                Log "${CaptiveLoginPrefix} ${ERROR}No TTY available to prompt for choice (use -c 1..6)${NoColor}"
+                Log "${CaptiveLoginPrefix} ${ERROR}Defaulting to option 5 (Done [Lockdown Mode]) due to lack of TTY${NoColor}"
+                choice=5
             fi
         else
-            Log "Please enter your choice [1-5]: ${choice}"
+            Log "Please enter your choice [1-6]: ${choice}"
         fi
         Log
 
@@ -150,16 +194,14 @@ SelectVPN() {
 
             # Enable Tailscale
             1)
-                Log "${TailscalePrefix} Enabling Tailscale..."
-                tailscale set --exit-node=oppy && Log "${TailscalePrefix} Set exit-node to \"oppy\""
+                EnableTailscale
                 MullvadDisableLockdown
                 break
                 ;;
 
             # Enable Mullvad
             2)
-                Log "${MullvadPrefix} Enabling Mullvad..."
-                mullvad connect --wait && Log "${MullvadPrefix} Connected"
+                EnableMullvad
                 MullvadDisableLockdown
                 break
                 ;;
@@ -167,25 +209,26 @@ SelectVPN() {
             # Enable Home VPN
             3)
                 MullvadDisableLockdown
-                Log "${VPNPrefix} Enabling Home VPN..."
-                if command -v nmcli >/dev/null 2>&1; then
-                    nmcli connection up "Home VPN" >/dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
-                else
-                    Log "${VPNPrefix} ${WARN}nmcli not found; skipping Home VPN${NoColor}"
-                fi
+                EnableHomeVPN
+                break
+                ;;
 
-                # nmcli connection up "Home VPN" > /dev/null 2>&1 && Log "${VPNPrefix} Enabled Home VPN"
+            # Enable Mullvad & Home VPN
+            4)
+                EnableMullvad
+                MullvadDisableLockdown
+                EnableHomeVPN
                 break
                 ;;
 
             # Done [Lockdown Mode]
-            4)
+            5)
                 Log "${CaptiveLoginPrefix} Done. Keeping lockdown mode on..."
                 break
                 ;;
             
             # Done [Unsecured]
-            5)
+            6)
                 Log "${CaptiveLoginPrefix} Done. Setting lockdown mode to off..."
                 MullvadDisableLockdown
                 break
@@ -315,8 +358,8 @@ while getopts ":hvsnc:" opt; do
 
     # Version option
     v)
-        Log "${BOLD}${GreyColor} Auto Captive Login Version${NoColor}"
-        Log "${BOLD}${GreyColor}----------------------------${NoColor}"
+        Log "${BOLD}${GreyColor} Auto Captive Portal Version${NoColor}"
+        Log "${BOLD}${GreyColor}-----------------------------${NoColor}"
         Log "${BOLD}${GreyColor}Wrapper:${NoColor} ${VERSION}"
         GetVersion
         Log
@@ -379,7 +422,7 @@ DisableVPN
 
 
 ############################################################
-# Auto Captive Login                                       #
+# Auto Captive Portal                                       #
 ############################################################
 
 # Check if the user has chosen to skip auto-captive-portal
