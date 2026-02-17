@@ -170,6 +170,23 @@ DisableHomeVPN() {
 
 
 ############################################################
+# Enable / Disable Local-Network Only for Home VPN         #
+############################################################
+
+HomeVPNEnableLocalOnly() {
+    Log "${VPNPrefix} Enabling \"Home VPN\" Local-Connections Only..."
+    nmcli connection modify "Home VPN" ipv4.never-default true > /dev/null 2>&1 \
+        && Log "${VPNPrefix} Enabled \"Home VPN\" Local-Connections Only" || Log "${VPNPrefix} ${WARN}Failed to enable \"Home VPN\" Local-Connections Only${NoColor}"
+}
+
+HomeVPNDisableLocalOnly() {
+    Log "${VPNPrefix} Disabling \"Home VPN\" Local-Connections Only..."
+    nmcli connection modify "Home VPN" ipv4.never-default false > /dev/null 2>&1 \
+        && Log "${VPNPrefix} Disabled \"Home VPN\" Local-Connections Only" || Log "${VPNPrefix} ${WARN}Failed to disable \"Home VPN\" Local-Connections Only${NoColor}"
+}
+
+
+############################################################
 # Enable / Disable Lockdown Mode                           #
 ############################################################
 
@@ -257,6 +274,7 @@ SelectVPN() {
             # Enable Home VPN
             3)
                 MullvadDisableLockdown
+                HomeVPNDisableLocalOnly
                 EnableHomeVPN
                 break
                 ;;
@@ -265,6 +283,7 @@ SelectVPN() {
             4)
                 EnableMullvad
                 MullvadDisableLockdown
+                HomeVPNEnableLocalOnly
                 EnableHomeVPN
                 break
                 ;;
