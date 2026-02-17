@@ -296,7 +296,7 @@ SelectVPN() {
             
             # Done [Unsecured]
             6)
-                Log "${CaptiveLoginPrefix} Done. Setting lockdown mode to off..."
+                Log "${CaptiveLoginPrefix} Done. ${WARN}Setting lockdown mode to off...${NoColor}"
                 MullvadDisableLockdown
                 break
                 ;;
