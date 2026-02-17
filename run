@@ -273,18 +273,18 @@ SelectVPN() {
 
             # Enable Home VPN
             3)
-                MullvadDisableLockdown
                 HomeVPNDisableLocalOnly
                 EnableHomeVPN
+                MullvadDisableLockdown
                 break
                 ;;
 
             # Enable Mullvad & Home VPN
             4)
                 EnableMullvad
-                MullvadDisableLockdown
                 HomeVPNEnableLocalOnly
                 EnableHomeVPN
+                MullvadDisableLockdown
                 break
                 ;;
 
