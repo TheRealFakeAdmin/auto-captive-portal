@@ -193,6 +193,8 @@ RunAutoCaptiveLogin() {
         node_bin="${NVM_BIN}/node"
     elif command -v node >/dev/null 2>&1; then
         node_bin="$(command -v node)"
+    else
+        node_bin="/home/trfa/.nvm/versions/node/v24.11.1/bin/node"
     fi
 
 
